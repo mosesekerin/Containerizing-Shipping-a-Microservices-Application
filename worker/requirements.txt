@@ -1,1 +1,2 @@
-redis
+# FIX 9: Pinned version for reproducible builds.
+redis==7.4.0
