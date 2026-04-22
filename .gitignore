@@ -1,6 +1,15 @@
+# api/
 venv/
 __pycache__/
 node_modules/
-.env
 *.pyc
+
+# frontend/
+package-lock.json
+
+#worker/
+venv/
+
+# /
+.env
 dump.rdb
