@@ -1,0 +1,350 @@
+# =================================================================
+# docker-compose.yml — Production Orchestration
+# hng14-stage2-devops
+#
+# How to use:
+#   1. Copy .env.example to .env and fill in real values
+#   2. docker compose up --build
+#
+# How to read this file:
+#   Services start in this order, enforced by health checks:
+#   redis → api → (frontend + worker simultaneously)
+# =================================================================
+
+# =================================================================
+# SERVICES
+# Each block defines one container: what image to use, how to
+# configure it, what it depends on, and how to constrain it.
+# =================================================================
+services:
+
+  # ---------------------------------------------------------------
+  # REDIS — the shared message queue and state store
+  # ---------------------------------------------------------------
+  redis:
+    # Build from our custom Dockerfile in the redis/ directory.
+    # This bakes in our production redis.conf.
+    build:
+      context: ./redis
+      dockerfile: Dockerfile
+
+    # Container name makes logs and `docker exec` commands readable.
+    # Without this Docker generates a random name like "hng_redis_1".
+    container_name: redis
+
+    # ── ENVIRONMENT ─────────────────────────────────────────────
+    # Pass the Redis password from our .env file.
+    # This overrides the placeholder in redis.conf at runtime using
+    # Redis's command-line flag --requirepass.
+    #
+    # Redis reads the requirepass value from redis.conf at startup,
+    # but we can override it cleanly via the command below.
+    # The actual secret never appears in this file — it stays in .env.
+    environment:
+      - REDIS_PASSWORD=${REDIS_PASSWORD}
+
+    # Pass --requirepass dynamically so the value comes from
+    # the environment variable, not baked into the image.
+    command: >
+      redis-server /usr/local/etc/redis/redis.conf
+      --requirepass ${REDIS_PASSWORD}
+
+    # ── NETWORK ─────────────────────────────────────────────────
+    # CRITICAL: Redis is attached to the internal network ONLY.
+    # There is NO `ports:` section here.
+    # Without `ports:`, Redis is completely unreachable from
+    # outside Docker. It cannot be accessed from the host machine
+    # or the internet — only by services on the same network.
+    networks:
+      - app-network
+
+    # ── PERSISTENCE ─────────────────────────────────────────────
+    # Named volume for Redis data files (RDB snapshots + AOF log).
+    # Without this, all queued jobs are lost every time the Redis
+    # container restarts.
+    # Named volumes persist across container restarts and recreations.
+    volumes:
+      - redis-data:/data
+
+    # ── HEALTHCHECK ─────────────────────────────────────────────
+    # Override the Dockerfile HEALTHCHECK here because Redis requires
+    # a password. The Dockerfile probe runs redis-cli ping with no
+    # auth and fails even when Redis is perfectly healthy.
+    # -a ${REDIS_PASSWORD} authenticates the probe correctly.
+    # start_period: 20s gives Redis time to fully initialise before
+    # failures start counting against it.
+    healthcheck:
+      test: ["CMD", "redis-cli", "-a", "${REDIS_PASSWORD}", "ping"]
+      interval: 10s
+      timeout: 5s
+      start_period: 20s
+      retries: 5
+
+    # ── RELIABILITY ─────────────────────────────────────────────
+    # on-failure: restart only if the container exits with an error.
+    # NOT "always" — that would restart even intentional shutdowns.
+    # max_attempts: stop trying after 5 failures to avoid a crash loop.
+    restart: on-failure:5
+
+    # ── RESOURCE LIMITS ─────────────────────────────────────────
+    # Without limits, a single container can consume ALL host memory
+    # and CPU, starving other services or crashing the host.
+    #
+    # limits:    hard ceiling — container is killed if exceeded
+    # reservations: guaranteed minimum — scheduler won't place
+    #               this container on a host with less available
+    deploy:
+      resources:
+        limits:
+          cpus: "0.50"
+          memory: 256M
+        reservations:
+          cpus: "0.10"
+          memory: 64M
+
+    # ── LOGGING ─────────────────────────────────────────────────
+    # json-file: Docker's default log driver.
+    # max-size/max-file: rotate logs to prevent disk exhaustion.
+    # Without rotation, long-running containers fill the disk.
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+
+  # ---------------------------------------------------------------
+  # API — FastAPI service
+  # ---------------------------------------------------------------
+  api:
+    build:
+      context: ./api
+      dockerfile: Dockerfile
+
+    container_name: api
+
+    # ── ENVIRONMENT ─────────────────────────────────────────────
+    # All configuration injected via environment variables.
+    # No hardcoded values. Every value comes from .env.
+    #
+    # REDIS_HOST is "redis" — the service name defined above.
+    # Docker's internal DNS resolves "redis" to the Redis
+    # container's IP address automatically. This is service
+    # discovery — no IP addresses, no external DNS needed.
+    environment:
+      - REDIS_HOST=redis
+      - REDIS_PORT=${REDIS_PORT:-6379}
+      - REDIS_PASSWORD=${REDIS_PASSWORD}
+      - APP_ENV=${APP_ENV:-production}
+
+    # ── PORTS ───────────────────────────────────────────────────
+    # Format: "HOST_PORT:CONTAINER_PORT"
+    # Exposes port 8000 on the host so you can call the API
+    # directly during development/debugging.
+    # In a real production deployment behind a load balancer,
+    # you would REMOVE this and only expose the frontend.
+    ports:
+      - "${API_PORT:-8000}:8000"
+
+    # ── NETWORKS ────────────────────────────────────────────────
+    networks:
+      - app-network
+
+    # ── STARTUP ORDER (HEALTH-BASED) ────────────────────────────
+    # This is the critical difference between basic depends_on
+    # and production-grade depends_on.
+    #
+    # Basic (WRONG for production):
+    #   depends_on:
+    #     - redis
+    # This only waits for the Redis container to START.
+    # It does NOT wait for Redis to be ready to accept connections.
+    # The API starts, immediately tries to connect, Redis is still
+    # initialising → connection refused → crash.
+    #
+    # Health-based (CORRECT):
+    #   depends_on:
+    #     redis:
+    #       condition: service_healthy
+    # Docker waits until Redis passes its HEALTHCHECK (defined in
+    # the Redis Dockerfile) before starting the API.
+    # Redis HEALTHCHECK = `redis-cli ping` returns PONG.
+    # Only when Redis is genuinely accepting commands does the
+    # API container start.
+    depends_on:
+      redis:
+        condition: service_healthy
+
+    restart: on-failure:5
+
+    deploy:
+      resources:
+        limits:
+          cpus: "0.75"
+          memory: 256M
+        reservations:
+          cpus: "0.25"
+          memory: 128M
+
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+
+  # ---------------------------------------------------------------
+  # WORKER — background job processor
+  # ---------------------------------------------------------------
+  worker:
+    build:
+      context: ./worker
+      dockerfile: Dockerfile
+
+    container_name: worker
+
+    environment:
+      - REDIS_HOST=redis
+      - REDIS_PORT=${REDIS_PORT:-6379}
+      - REDIS_PASSWORD=${REDIS_PASSWORD}
+
+    # ── NO PORTS ────────────────────────────────────────────────
+    # The worker is a pure background process.
+    # It doesn't serve any HTTP traffic.
+    # It has no ports and is not reachable from outside Docker.
+    # It only communicates through Redis on the internal network.
+
+    networks:
+      - app-network
+
+    # The worker needs Redis healthy before starting —
+    # same reasoning as the API.
+    depends_on:
+      redis:
+        condition: service_healthy
+
+    # ── RESTART POLICY ──────────────────────────────────────────
+    # The worker is the most failure-prone service — it processes
+    # jobs and can encounter unexpected input. If it crashes,
+    # we want it back up quickly but with a back-off limit to
+    # avoid spinning in a crash loop.
+    restart: on-failure:5
+
+    deploy:
+      resources:
+        limits:
+          cpus: "0.50"
+          memory: 128M
+        reservations:
+          cpus: "0.10"
+          memory: 64M
+
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+
+  # ---------------------------------------------------------------
+  # FRONTEND — Express proxy + static UI
+  # ---------------------------------------------------------------
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+
+    container_name: frontend
+
+    environment:
+      # "api" resolves to the API container via Docker DNS.
+      # This is how the frontend knows where to send job requests.
+      - API_URL=http://api:8000
+      - PORT=${FRONTEND_PORT:-3000}
+
+    # ── PORTS ───────────────────────────────────────────────────
+    # The frontend is the ONLY service exposed to the outside world.
+    # Users access the app through this port.
+    ports:
+      - "${FRONTEND_PORT:-3000}:3000"
+
+    networks:
+      - app-network
+
+    # ── STARTUP ORDER ───────────────────────────────────────────
+    # The frontend depends on the API being healthy — not just
+    # running. If the API isn't ready, the frontend would start
+    # serving a UI that can't process any requests.
+    #
+    # Chain of health gates:
+    #   redis healthy → api healthy → frontend starts
+    depends_on:
+      api:
+        condition: service_healthy
+
+    restart: on-failure:5
+
+    deploy:
+      resources:
+        limits:
+          cpus: "0.50"
+          memory: 128M
+        reservations:
+          cpus: "0.10"
+          memory: 64M
+
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+
+# =================================================================
+# NETWORKS
+#
+# We define a single internal network that all services share.
+# Services on this network can talk to each other by service name.
+# Services NOT on this network cannot talk to each other.
+#
+# bridge: the default Docker network driver for single-host
+#         deployments. Creates a virtual network switch on the
+#         host that containers connect to.
+#
+# Why define it explicitly instead of using Docker's default?
+# - Explicit networks are named and inspectable (`docker network ls`)
+# - Default networks use sequential naming that can collide
+# - We can apply network-level options (encryption, subnet) here
+# - It's clear in the compose file what can reach what
+# =================================================================
+networks:
+  app-network:
+    driver: bridge
+    # Custom subnet (optional but useful for debugging).
+    # Knowing the exact IP range makes `docker network inspect`
+    # and firewall rules predictable.
+    ipam:
+      config:
+        - subnet: 172.28.0.0/16
+
+
+# =================================================================
+# VOLUMES
+#
+# Named volumes are managed by Docker and persist across container
+# restarts. They are stored at /var/lib/docker/volumes/ on the host.
+#
+# redis-data: stores Redis's RDB snapshots and AOF log.
+#   Without this volume:
+#     - docker compose down → all queued jobs lost
+#     - Redis container restart → all state lost
+#   With this volume:
+#     - Redis restarts cleanly, replays the AOF log, recovers all
+#       queued jobs that were written to disk
+#
+# We don't define volumes for the API, worker, or frontend because
+# those services are stateless — all state lives in Redis.
+# =================================================================
+volumes:
+  redis-data:
+    driver: local
