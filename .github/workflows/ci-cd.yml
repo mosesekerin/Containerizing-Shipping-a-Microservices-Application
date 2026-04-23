@@ -544,7 +544,11 @@ jobs:
           password: ${{ secrets.GITHUB_TOKEN }}
 
       # ── Start the system ──────────────────────────────────────
-      - name: Start all services
+      - name: Run docker compose
+        env:
+          REGISTRY: ghcr.io
+          IMAGE_PREFIX: ghcr.io/mosesekerin/Containerizing-Shipping-a-Microservices-Application
+        shell: /usr/bin/bash -e {0}
         run: |
           docker compose \
             -f docker-compose.yml \
