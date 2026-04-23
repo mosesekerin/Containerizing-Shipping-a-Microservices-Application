@@ -16,7 +16,7 @@
 FROM node:18-slim AS builder
 
 # Then update system packages
-RUN apk update && apk upgrade
+RUN apt-get update && apt-get upgrade -y
 
 WORKDIR /app
 
