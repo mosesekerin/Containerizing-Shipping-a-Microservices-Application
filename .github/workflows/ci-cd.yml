@@ -275,6 +275,7 @@ jobs:
         run: |
           SHA_SHORT=$(echo "${{ github.sha }}" | cut -c1-7)
           echo "sha_short=${SHA_SHORT}" >> $GITHUB_OUTPUT
+          # Convert to lowercase and store
           IMAGE_PREFIX=$(echo "ghcr.io/${{ github.repository }}" | tr '[:upper:]' '[:lower:]')
           echo "image_prefix=${IMAGE_PREFIX}" >> $GITHUB_OUTPUT
 
