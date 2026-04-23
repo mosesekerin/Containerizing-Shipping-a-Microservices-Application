@@ -546,9 +546,10 @@ jobs:
       # ── Start the system ──────────────────────────────────────
       - name: Start all services
         run: |
-          docker compose -f docker-compose.yml up --build -d
-          sleep 10
-          curl -f http://localhost:8000/health
+          docker compose \
+            -f docker-compose.yml \
+            up -d --wait
+          echo "All services started."
 
       # ── Wait for health gates to pass ─────────────────────────
       - name: Wait for system to be fully healthy
@@ -622,7 +623,7 @@ jobs:
       # This prevents stale containers from affecting future runs.
       - name: Tear down services
         if: always()
-        run: docker compose -f docker-compose.yml -f docker-compose.ci.yml down -v
+        run: docker compose -f docker-compose.yml down -v
 
 
   # =================================================================
