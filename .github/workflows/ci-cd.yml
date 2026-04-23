@@ -546,8 +546,9 @@ jobs:
       # ── Start the system ──────────────────────────────────────
       - name: Start all services
         run: |
-          docker compose up -d --wait
-          echo "All services started."
+          docker compose -f docker-compose.yml up --build -d
+          sleep 10
+          curl -f http://localhost:8000/health
 
       # ── Wait for health gates to pass ─────────────────────────
       - name: Wait for system to be fully healthy
