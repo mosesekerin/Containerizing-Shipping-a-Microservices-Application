@@ -418,67 +418,30 @@ jobs:
       fail-fast: false
 
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
-      # Pull the image we just built from the local registry.
-      # Note: The local registry from the build job doesn't persist
-      # between jobs. We pull from ghcr.io instead.
-      - name: Pull image for scanning
-        run: |
-          docker pull ${{ needs.build.outputs.image_prefix }}/${{ matrix.service }}:${{ needs.build.outputs.image_tag }}
-
-      # ── Trivy scan ────────────────────────────────────────────
-      - name: Scan ${{ matrix.service }} image with Trivy
-        uses: aquasecurity/trivy-action@master
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@v3
         with:
-          image-ref: >
-            ${{ needs.build.outputs.image_prefix }}/${{ matrix.service }}:${{ needs.build.outputs.image_tag }}
-          # Scan both OS packages and application libraries
-          scanners: "vuln,secret,misconfig"
-          # CRITICAL: fail pipeline immediately
-          # HIGH: fail pipeline (we treat high as unacceptable)
-          exit-code: "1"
-          severity: "CRITICAL,HIGH"
-          # human-readable table format
-          format: "table"
-          # Ignore CVEs that have no fix available yet.
-          # A CVE with no fix is not actionable — you can't do
-          # anything about it right now. Failing on unfixable
-          # CVEs creates alert fatigue without improving security.
-          ignore-unfixed: true
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
 
-      # ── Upload Trivy results as artifact ──────────────────────
-      # Even on failure, upload the SARIF report so developers
-      # can see exactly what was found.
+      - name: Pull and save image as tar
+        run: |
+          IMAGE="${{ needs.build.outputs.image_prefix }}/${{ matrix.service }}:${{ needs.build.outputs.image_tag }}"
+          docker pull "$IMAGE"
+          docker save "$IMAGE" -o image.tar
 
+      - name: Install Trivy v0.58.1
+        run: |
+          curl -sfL https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/install.sh             | sh -s -- -b /usr/local/bin v0.58.1
+          trivy --version
 
-  # =================================================================
-  # ──────────────────────────────────────────────────────────────────
-  # STAGE 5 — INTEGRATION TEST
-  #
-  # PURPOSE:
-  #   Spin up the COMPLETE system (all 4 containers) using the
-  #   freshly built images, submit a real job through the real
-  #   frontend, and verify the job reaches 'completed' status.
-  #
-  # THIS IS THE MOST IMPORTANT STAGE.
-  #   Unit tests (Stage 2) verify individual functions work.
-  #   Integration tests verify ALL FOUR SERVICES work together.
-  #
-  #   A system can pass all unit tests and still fail integration
-  #   if: the API and worker use different Redis key names, the
-  #   frontend can't reach the API, or startup order is wrong.
-  #
-  # WHAT IT TESTS:
-  #   ✓ All containers start in the correct health-gated order
-  #   ✓ Frontend is reachable on port 3000
-  #   ✓ POST /submit creates a real job
-  #   ✓ The worker picks up and processes the job
-  #   ✓ GET /status returns 'completed' within 30 seconds
-  #   ✓ System shuts down cleanly
-  # ──────────────────────────────────────────────────────────────────
-  # =================================================================
+      - name: Scan image tar with Trivy
+        run: |
+          trivy image             --exit-code 1             --severity CRITICAL,HIGH             --ignore-unfixed             --scanners vuln             --no-progress             --input image.tar
+
   integration:
     name: Integration Test
     runs-on: ubuntu-latest
