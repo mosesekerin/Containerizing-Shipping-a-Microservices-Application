@@ -451,12 +451,6 @@ jobs:
       # ── Upload Trivy results as artifact ──────────────────────
       # Even on failure, upload the SARIF report so developers
       # can see exactly what was found.
-      - name: Upload Trivy SARIF results
-        uses: github/codeql-action/upload-sarif@v3
-        if: always()
-        with:
-          sarif_file: trivy-results.sarif
-        continue-on-error: true
 
 
   # =================================================================
