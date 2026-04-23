@@ -260,6 +260,7 @@ jobs:
     # Make the image tags available to downstream jobs
     outputs:
       image_tag: ${{ steps.meta.outputs.sha_short }}
+      image_prefix: ${{ steps.meta.outputs.image_prefix }}
 
     steps:
       - name: Checkout code
