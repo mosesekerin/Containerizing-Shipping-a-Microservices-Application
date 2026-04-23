@@ -21,13 +21,15 @@ import json
 # You can search "show me all ERROR logs where service=api
 # in the last 10 minutes" — impossible with plain text.
 # =================================================================
+
+
 class JSONFormatter(logging.Formatter):
     def format(self, record):
         log_entry = {
             "timestamp": self.formatTime(record),
-            "level":     record.levelname,
-            "service":   "api",
-            "message":   record.getMessage(),
+            "level": record.levelname,
+            "service": "api",
+            "message": record.getMessage(),
         }
         # Attach any extra fields passed to the logger
         if hasattr(record, 'job_id'):
@@ -36,10 +38,12 @@ class JSONFormatter(logging.Formatter):
             log_entry['exception'] = self.formatException(record.exc_info)
         return json.dumps(log_entry)
 
+
 handler = logging.StreamHandler()
 handler.setFormatter(JSONFormatter())
 logging.basicConfig(level=logging.INFO, handlers=[handler])
 logger = logging.getLogger(__name__)
+
 
 # =================================================================
 # REDIS CONNECTION WITH RETRY + CONNECTION POOL
@@ -68,8 +72,8 @@ logger = logging.getLogger(__name__)
 #      attempt 3 fails → wait 0.4s
 #    Each wait doubles. After 3 attempts, give up and return 503.
 # =================================================================
-REDIS_HOST     = os.environ.get("REDIS_HOST", "localhost")
-REDIS_PORT     = int(os.environ.get("REDIS_PORT", 6379))
+REDIS_HOST = os.environ.get("REDIS_HOST", "localhost")
+REDIS_PORT = int(os.environ.get("REDIS_PORT", 6379))
 REDIS_PASSWORD = os.environ.get("REDIS_PASSWORD", None)
 
 retry_policy = Retry(ExponentialBackoff(), retries=3)

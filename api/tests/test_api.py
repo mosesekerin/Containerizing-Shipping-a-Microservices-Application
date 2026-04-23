@@ -6,7 +6,7 @@ all TestClient requests. The patch must be active for the entire
 duration of client use, including the context manager block.
 """
 import fakeredis
-from unittest.mock import patch, MagicMock
+from unittest.mock import MagicMock
 from fastapi.testclient import TestClient
 from contextlib import asynccontextmanager
 import redis as redis_lib
