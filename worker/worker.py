@@ -11,13 +11,15 @@ import json
 # =================================================================
 # STRUCTURED LOGGING — same format as API for unified log search
 # =================================================================
+
+
 class JSONFormatter(logging.Formatter):
     def format(self, record):
         log_entry = {
             "timestamp": self.formatTime(record),
-            "level":     record.levelname,
-            "service":   "worker",
-            "message":   record.getMessage(),
+            "level": record.levelname,
+            "service": "worker",
+            "message": record.getMessage(),
         }
         if hasattr(record, 'job_id'):
             log_entry['job_id'] = record.job_id
@@ -27,6 +29,7 @@ class JSONFormatter(logging.Formatter):
             log_entry['exception'] = self.formatException(record.exc_info)
         return json.dumps(log_entry)
 
+
 handler = logging.StreamHandler()
 handler.setFormatter(JSONFormatter())
 logging.basicConfig(level=logging.INFO, handlers=[handler])
@@ -35,8 +38,8 @@ logger = logging.getLogger(__name__)
 # =================================================================
 # CONFIGURATION
 # =================================================================
-REDIS_HOST     = os.environ.get("REDIS_HOST", "localhost")
-REDIS_PORT     = int(os.environ.get("REDIS_PORT", 6379))
+REDIS_HOST = os.environ.get("REDIS_HOST", "localhost")
+REDIS_PORT = int(os.environ.get("REDIS_PORT", 6379))
 REDIS_PASSWORD = os.environ.get("REDIS_PASSWORD", None)
 
 # How many times to retry a failed job before giving up
@@ -68,13 +71,15 @@ r = redis.Redis(
 # =================================================================
 shutdown_requested = False
 
+
 def handle_shutdown(signum, frame):
     global shutdown_requested
     logger.info("Shutdown signal received. Finishing current job then exiting.")
     shutdown_requested = True
 
+
 signal.signal(signal.SIGTERM, handle_shutdown)
-signal.signal(signal.SIGINT,  handle_shutdown)
+signal.signal(signal.SIGINT, handle_shutdown)
 
 
 # =================================================================
@@ -181,12 +186,12 @@ def process_job(job_id: str):
 
         # ── WRITE RESULT ─────────────────────────────────────────
         r.hset(f"job:{job_id}", mapping={
-            "status":      "completed",
+            "status": "completed",
             "retry_count": retry_count,
         })
         logger.info("Job completed.", extra={"job_id": job_id})
 
-    except redis.exceptions.ConnectionError as e:
+    except redis.exceptions.ConnectionError:
         # Redis is unavailable — we can't even write the result.
         # Re-queue the job so it isn't lost. It will be picked up
         # when Redis recovers.
@@ -214,7 +219,7 @@ def process_job(job_id: str):
         )
         try:
             r.hset(f"job:{job_id}", mapping={
-                "status":      "retrying",
+                "status": "retrying",
                 "retry_count": new_retry_count,
             })
             r.lpush("job", job_id)
