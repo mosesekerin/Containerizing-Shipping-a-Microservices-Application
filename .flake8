@@ -1,0 +1,47 @@
+[flake8]
+# =================================================================
+# flake8 — Python style and error linter
+#
+# flake8 checks for:
+#   E: PEP8 style errors (spacing, line length, imports)
+#   W: PEP8 style warnings
+#   F: pyflakes errors (undefined names, unused imports)
+#
+# Why lint? A linter catches bugs before runtime:
+#   F821 = undefined name → would crash at runtime
+#   F401 = unused import → dead code, maintenance hazard
+#   E711 = comparison to None with == instead of `is` → wrong in Python
+# =================================================================
+
+# Files and directories to never lint
+exclude =
+    .git,
+    __pycache__,
+    .venv,
+    venv,
+    node_modules,
+    .eggs,
+    *.egg-info,
+    dist,
+    build
+
+# Maximum line length.
+# PEP8 says 79. Most modern teams use 99 or 120.
+# 99 is a reasonable balance.
+max-line-length = 99
+
+# Error codes to ignore:
+# E501 = line too long (we handle this with max-line-length above)
+# W503 = line break before binary operator (style preference, not a bug)
+extend-ignore = W503
+
+# Minimum number of characters in a name before flake8 complains
+# it's too short. Default is 1, which allows single-letter variables.
+# We keep it low because loop variables like `e`, `r`, `i` are fine.
+min-name-length = 1
+
+# Per-file ignores — some files have legitimate reasons to bend rules
+per-file-ignores =
+    # Test files can have longer lines (test names are descriptive)
+    api/tests/*.py: E501
+

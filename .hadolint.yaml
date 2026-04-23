@@ -1,0 +1,20 @@
+# .hadolint.yaml — Dockerfile linter configuration
+#
+# hadolint checks Dockerfiles for:
+#   - Security issues (running as root, no HEALTHCHECK)
+#   - Best practices (pinned versions, layer caching)
+#   - Shell script issues inside RUN commands (via shellcheck)
+#
+# Rule reference: https://github.com/hadolint/hadolint/wiki
+
+failure-threshold: warning
+
+ignore:
+  # DL3008: Pin versions in apt-get install
+  # We don't use apt-get in our Dockerfiles but keeping this
+  # as documentation of the rule category
+  - DL3018
+
+trustedRegistries:
+  - docker.io
+  - ghcr.io
