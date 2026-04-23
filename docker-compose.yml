@@ -175,6 +175,14 @@ services:
       redis:
         condition: service_healthy
 
+    # ✅ ADD THIS HEALTHCHECK
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 10s
+      timeout: 5s
+      start_period: 30s
+      retries: 5
+
     restart: on-failure:5
 
     deploy:

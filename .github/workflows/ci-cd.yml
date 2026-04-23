@@ -548,7 +548,7 @@ jobs:
         run: |
           docker compose \
             -f docker-compose.yml \
-            up -d
+            up -d --wait
           echo "All services started."
 
       # ── Wait for health gates to pass ─────────────────────────
