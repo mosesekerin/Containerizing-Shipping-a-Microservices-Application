@@ -435,12 +435,18 @@ jobs:
 
       - name: Install Trivy v0.58.1
         run: |
-          curl -sfL https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/install.sh             | sh -s -- -b /usr/local/bin v0.58.1
+          curl -sfL https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/install.sh | sh -s -- -b /usr/local/bin v0.58.1
           trivy --version
 
       - name: Scan image tar with Trivy
         run: |
-          trivy image             --exit-code 1             --severity CRITICAL,HIGH             --ignore-unfixed             --scanners vuln             --no-progress             --input image.tar
+          trivy image \
+            --exit-code 1 \
+            --severity CRITICAL,HIGH \
+            --ignore-unfixed \
+            --scanners vuln \
+            --no-progress \
+            --input image.tar
 
   integration:
     name: Integration Test
