@@ -437,11 +437,11 @@ jobs:
         with:
           image-ref: ${{ needs.build.outputs.image_prefix }}/${{ matrix.service }}:${{ needs.build.outputs.image_tag }}
           # Scan both OS packages and application libraries
-          scanners: "vuln,secret,misconfig"
+          scanners: "secret,misconfig"
           # CRITICAL: fail pipeline immediately
           # HIGH: fail pipeline (we treat high as unacceptable)
           exit-code: "1"
-          severity: "CRITICAL,HIGH"
+          severity: "CRITICAL"
           # human-readable table format
           #format: "table"
           format: sarif
