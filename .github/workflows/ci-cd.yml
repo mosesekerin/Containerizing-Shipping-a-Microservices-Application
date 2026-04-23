@@ -522,16 +522,17 @@ jobs:
       - name: Create compose override for CI images
         run: |
           SHA="${{ needs.build.outputs.image_tag }}"
+          PREFIX="${{ needs.build.outputs.image_prefix }}"
           cat > docker-compose.ci.yml << EOF
           services:
             api:
-              image: ${{ env.IMAGE_PREFIX }}/api:${SHA}
+              image: ${PREFIX}/api:${SHA}
             worker:
-              image: ${{ env.IMAGE_PREFIX }}/worker:${SHA}
+              image: ${PREFIX}/worker:${SHA}
             frontend:
-              image: ${{ env.IMAGE_PREFIX }}/frontend:${SHA}
+              image: ${PREFIX}/frontend:${SHA}
             redis:
-              image: ${{ env.IMAGE_PREFIX }}/redis:${SHA}
+              image: ${PREFIX}/redis:${SHA}
           EOF
 
       # ── Log in to pull the built images ──────────────────────
