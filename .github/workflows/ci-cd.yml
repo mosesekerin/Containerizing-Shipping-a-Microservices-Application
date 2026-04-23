@@ -428,7 +428,7 @@ jobs:
       # between jobs. We pull from ghcr.io instead.
       - name: Pull image for scanning
         run: |
-          docker pull ${{ needs.build.outputs.image_prefix }}/${{ matrix.service }}:${{ needs.build.outputs.image_tag }}'
+          docker pull ${{ needs.build.outputs.image_prefix }}/${{ matrix.service }}:${{ needs.build.outputs.image_tag }}
          
 
       # ── Trivy scan ────────────────────────────────────────────
