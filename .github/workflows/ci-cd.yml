@@ -544,16 +544,9 @@ jobs:
           password: ${{ secrets.GITHUB_TOKEN }}
 
       # ── Start the system ──────────────────────────────────────
-      - name: Run docker compose
-        env:
-          REGISTRY: ghcr.io
-          IMAGE_PREFIX: ghcr.io/mosesekerin/Containerizing-Shipping-a-Microservices-Application
-        shell: /usr/bin/bash -e {0}
+      - name: Start all services
         run: |
-          docker compose \
-            -f docker-compose.yml \
-            -f docker-compose.ci.yml \
-            up -d --wait
+          docker compose up -d --wait
           echo "All services started."
 
       # ── Wait for health gates to pass ─────────────────────────
