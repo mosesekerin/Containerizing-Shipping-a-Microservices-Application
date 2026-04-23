@@ -526,16 +526,12 @@ jobs:
           services:
             api:
               image: ${{ env.IMAGE_PREFIX }}/api:${SHA}
-              build: !reset null
             worker:
               image: ${{ env.IMAGE_PREFIX }}/worker:${SHA}
-              build: !reset null
             frontend:
               image: ${{ env.IMAGE_PREFIX }}/frontend:${SHA}
-              build: !reset null
             redis:
               image: ${{ env.IMAGE_PREFIX }}/redis:${SHA}
-              build: !reset null
           EOF
 
       # ── Log in to pull the built images ──────────────────────
