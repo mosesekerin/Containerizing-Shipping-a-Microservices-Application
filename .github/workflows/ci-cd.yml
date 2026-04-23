@@ -42,8 +42,6 @@ env:
   # included in GitHub Actions minutes for private repos)
   REGISTRY: ghcr.io
   # github.repository = "username/repo-name"
-  # Images will be named: ghcr.io/username/repo-name/service:tag
-  IMAGE_PREFIX: ghcr.io/${{ github.repository }}
 
 
 # =================================================================
@@ -260,6 +258,7 @@ jobs:
     # Make the image tags available to downstream jobs
     outputs:
       image_tag: ${{ steps.meta.outputs.sha_short }}
+      image_prefix: ${{ steps.meta.outputs.image_prefix }}
 
     steps:
       - name: Checkout code
@@ -274,6 +273,8 @@ jobs:
         run: |
           SHA_SHORT=$(echo "${{ github.sha }}" | cut -c1-7)
           echo "sha_short=${SHA_SHORT}" >> $GITHUB_OUTPUT
+          IMAGE_PREFIX=$(echo "ghcr.io/${{ github.repository }}" | tr '[:upper:]' '[:lower:]')
+          echo "image_prefix=${IMAGE_PREFIX}" >> $GITHUB_OUTPUT
           echo "Building images with tag: ${SHA_SHORT}"
 
       # ── Start local registry ──────────────────────────────────
@@ -327,8 +328,8 @@ jobs:
           tags: |
             localhost:5000/api:${{ steps.meta.outputs.sha_short }}
             localhost:5000/api:latest
-            ${{ env.IMAGE_PREFIX }}/api:${{ steps.meta.outputs.sha_short }}
-            ${{ env.IMAGE_PREFIX }}/api:latest
+            ${{ steps.meta.outputs.image_prefix }}/api:${{ steps.meta.outputs.sha_short }}
+            ${{ steps.meta.outputs.image_prefix }}/api:latest
           cache-from: type=gha,scope=api
           cache-to:   type=gha,scope=api,mode=max
 
@@ -340,8 +341,8 @@ jobs:
           tags: |
             localhost:5000/worker:${{ steps.meta.outputs.sha_short }}
             localhost:5000/worker:latest
-            ${{ env.IMAGE_PREFIX }}/worker:${{ steps.meta.outputs.sha_short }}
-            ${{ env.IMAGE_PREFIX }}/worker:latest
+            ${{ steps.meta.outputs.image_prefix }}/worker:${{ steps.meta.outputs.sha_short }}
+            ${{ steps.meta.outputs.image_prefix }}/worker:latest
           cache-from: type=gha,scope=worker
           cache-to:   type=gha,scope=worker,mode=max
 
@@ -353,8 +354,8 @@ jobs:
           tags: |
             localhost:5000/frontend:${{ steps.meta.outputs.sha_short }}
             localhost:5000/frontend:latest
-            ${{ env.IMAGE_PREFIX }}/frontend:${{ steps.meta.outputs.sha_short }}
-            ${{ env.IMAGE_PREFIX }}/frontend:latest
+            ${{ steps.meta.outputs.image_prefix }}/frontend:${{ steps.meta.outputs.sha_short }}
+            ${{ steps.meta.outputs.image_prefix }}/frontend:latest
           cache-from: type=gha,scope=frontend
           cache-to:   type=gha,scope=frontend,mode=max
 
@@ -366,8 +367,8 @@ jobs:
           tags: |
             localhost:5000/redis:${{ steps.meta.outputs.sha_short }}
             localhost:5000/redis:latest
-            ${{ env.IMAGE_PREFIX }}/redis:${{ steps.meta.outputs.sha_short }}
-            ${{ env.IMAGE_PREFIX }}/redis:latest
+            ${{ steps.meta.outputs.image_prefix }}/redis:${{ steps.meta.outputs.sha_short }}
+            ${{ steps.meta.outputs.image_prefix }}/redis:latest
           cache-from: type=gha,scope=redis
           cache-to:   type=gha,scope=redis,mode=max
 
@@ -425,14 +426,14 @@ jobs:
       # between jobs. We pull from ghcr.io instead.
       - name: Pull image for scanning
         run: |
-          docker pull ${{ env.IMAGE_PREFIX }}/${{ matrix.service }}:${{ needs.build.outputs.image_tag }}
+          docker pull ${{ needs.build.outputs.image_prefix }}/${{ matrix.service }}:${{ needs.build.outputs.image_tag }}
 
       # ── Trivy scan ────────────────────────────────────────────
       - name: Scan ${{ matrix.service }} image with Trivy
         uses: aquasecurity/trivy-action@master
         with:
           image-ref: >
-            ${{ env.IMAGE_PREFIX }}/${{ matrix.service }}:${{ needs.build.outputs.image_tag }}
+            ${{ needs.build.outputs.image_prefix }}/${{ matrix.service }}:${{ needs.build.outputs.image_tag }}
           # Scan both OS packages and application libraries
           scanners: "vuln,secret,misconfig"
           # CRITICAL: fail pipeline immediately
@@ -520,16 +521,16 @@ jobs:
           cat > docker-compose.ci.yml << EOF
           services:
             api:
-              image: ${{ env.IMAGE_PREFIX }}/api:${SHA}
+              image: ${{ needs.build.outputs.image_prefix }}/api:${SHA}
               build: !reset null
             worker:
-              image: ${{ env.IMAGE_PREFIX }}/worker:${SHA}
+              image: ${{ needs.build.outputs.image_prefix }}/worker:${SHA}
               build: !reset null
             frontend:
-              image: ${{ env.IMAGE_PREFIX }}/frontend:${SHA}
+              image: ${{ needs.build.outputs.image_prefix }}/frontend:${SHA}
               build: !reset null
             redis:
-              image: ${{ env.IMAGE_PREFIX }}/redis:${SHA}
+              image: ${{ needs.build.outputs.image_prefix }}/redis:${SHA}
               build: !reset null
           EOF
 
