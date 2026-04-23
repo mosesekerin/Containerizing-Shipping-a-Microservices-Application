@@ -273,8 +273,8 @@ jobs:
         run: |
           SHA_SHORT=$(echo "${{ github.sha }}" | cut -c1-7)
           echo "sha_short=${SHA_SHORT}" >> $GITHUB_OUTPUT
-          IMAGE_PREFIX=$(echo "ghcr.io/${{ github.repository }}" | tr '[:upper:]' '[:lower:]')
-          echo "image_prefix=${IMAGE_PREFIX}" >> $GITHUB_OUTPUT
+          OWNER=$(echo "${{ github.repository_owner }}" | tr '[:upper:]' '[:lower:]')
+          echo "image_prefix=ghcr.io/${OWNER}" >> $GITHUB_OUTPUT
           echo "Building images with tag: ${SHA_SHORT}"
 
       # ── Start local registry ──────────────────────────────────
