@@ -1,6 +1,6 @@
 # =================================================================
 # .github/workflows/ci-cd.yml
-# CI/CD Pipeline — hng14-stage2-devops
+# CI/CD Pipeline → hng14-stage2-devops
 #
 # PIPELINE STAGES (run in this exact order):
 #   1. lint       → flake8 (Python), eslint (JS), hadolint (Docker)
