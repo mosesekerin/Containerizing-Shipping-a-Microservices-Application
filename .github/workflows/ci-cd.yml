@@ -341,8 +341,8 @@ jobs:
           tags: |
             localhost:5000/worker:${{ steps.meta.outputs.sha_short }}
             localhost:5000/worker:latest
-            ${{ steps.meta.outputs.image_prefix }}/api:${{ steps.meta.outputs.sha_short }}
-            ${{ steps.meta.outputs.image_prefix }}/api:latest
+            ${{ steps.meta.outputs.image_prefix }}/worker:${{ steps.meta.outputs.sha_short }}
+            ${{ steps.meta.outputs.image_prefix }}/worker:latest
           cache-from: type=gha,scope=worker
           cache-to:   type=gha,scope=worker,mode=max
 
@@ -354,8 +354,8 @@ jobs:
           tags: |
             localhost:5000/frontend:${{ steps.meta.outputs.sha_short }}
             localhost:5000/frontend:latest
-            ${{ steps.meta.outputs.image_prefix }}/api:${{ steps.meta.outputs.sha_short }}
-            ${{ steps.meta.outputs.image_prefix }}/api:latest
+            ${{ steps.meta.outputs.image_prefix }}/frontend:${{ steps.meta.outputs.sha_short }}
+            ${{ steps.meta.outputs.image_prefix }}/frontend:latest
           cache-from: type=gha,scope=frontend
           cache-to:   type=gha,scope=frontend,mode=max
 
@@ -367,8 +367,8 @@ jobs:
           tags: |
             localhost:5000/redis:${{ steps.meta.outputs.sha_short }}
             localhost:5000/redis:latest
-            ${{ steps.meta.outputs.image_prefix }}/api:${{ steps.meta.outputs.sha_short }}
-            ${{ steps.meta.outputs.image_prefix }}/api:latest
+            ${{ steps.meta.outputs.image_prefix }}/redis:${{ steps.meta.outputs.sha_short }}
+            ${{ steps.meta.outputs.image_prefix }}/redis:latest
           cache-from: type=gha,scope=redis
           cache-to:   type=gha,scope=redis,mode=max
 
