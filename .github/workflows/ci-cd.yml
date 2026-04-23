@@ -106,16 +106,29 @@ jobs:
           cache: "npm"
           cache-dependency-path: frontend/package-lock.json
 
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "18"
+          cache: "npm"
+          cache-dependency-path: frontend/package-lock.json
+
       - name: Install frontend dependencies
         working-directory: frontend
-        # npm ci installs exactly what's in package-lock.json.
-        # --omit=dev: we need eslint here, but it's in devDependencies.
-        # So we install everything (including dev) for linting.
         run: npm ci
 
-      - name: Lint JavaScript — Frontend
+      - name: Lint JavaScript
         working-directory: frontend
-        run: npx eslint app.js --config .eslintrc.json
+        run: |
+          npx eslint@8.57.0 app.js \
+            --rule '{"no-unused-vars": "error"}' \
+            --rule '{"no-undef": "error"}' \
+            --rule '{"semi": ["error", "always"]}' \
+            --rule '{"no-var": "error"}' \
+            --rule '{"prefer-const": "error"}' \
+            --env node \
+            --env es2021 \
+            --parser-options 'ecmaVersion:2021'
 
       # ── Dockerfile lint ───────────────────────────────────────
       - name: Install hadolint
