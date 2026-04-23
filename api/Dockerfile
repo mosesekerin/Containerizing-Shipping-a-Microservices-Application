@@ -12,7 +12,10 @@
 # A multi-stage build lets us keep build tools out of the final
 # image entirely — smaller image, smaller attack surface.
 # ─────────────────────────────────────────────────────────────────
-FROM python:3.11-slim AS builder
+FROM python:3.11-alpine3.19 AS builder
+
+# Then update system packages
+RUN apk update && apk upgrade
 
 # Set a working directory inside the builder container.
 # All subsequent commands run from here.

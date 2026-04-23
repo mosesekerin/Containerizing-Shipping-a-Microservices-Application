@@ -6,7 +6,10 @@
 # The worker only needs the `redis` library, so this stage is
 # extremely lean — but the pattern is correct and consistent.
 # ─────────────────────────────────────────────────────────────────
-FROM python:3.11-slim AS builder
+FROM python:3.11-alpine3.19 AS builder
+
+# Then update system packages
+RUN apk update && apk upgrade
 
 WORKDIR /app
 

@@ -15,6 +15,9 @@
 # ─────────────────────────────────────────────────────────────────
 FROM node:18-slim AS builder
 
+# Then update system packages
+RUN apk update && apk upgrade
+
 WORKDIR /app
 
 # Copy package files first — layer cache optimisation.
