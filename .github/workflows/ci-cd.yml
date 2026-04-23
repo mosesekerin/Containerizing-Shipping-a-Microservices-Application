@@ -432,8 +432,7 @@ jobs:
       - name: Scan ${{ matrix.service }} image with Trivy
         uses: aquasecurity/trivy-action@master
         with:
-          image-ref: |
-            ${{ env.IMAGE_PREFIX }}/${{ matrix.service }}:${{ needs.build.outputs.image_tag }}
+          image-ref: ${{ needs.build.outputs.image_prefix }}/${{ matrix.service }}:${{ needs.build.outputs.image_tag }}
           # Scan both OS packages and application libraries
           scanners: "vuln,secret,misconfig"
           # CRITICAL: fail pipeline immediately
@@ -441,7 +440,9 @@ jobs:
           exit-code: "1"
           severity: "CRITICAL,HIGH"
           # human-readable table format
-          format: "table"
+          #format: "table"
+          format: sarif
+          output: trivy-results.sarif
           # Ignore CVEs that have no fix available yet.
           # A CVE with no fix is not actionable — you can't do
           # anything about it right now. Failing on unfixable
